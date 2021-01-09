@@ -87,13 +87,14 @@ exports.getPostById = async (req, res) => {
 
 exports.addPost = async (req, res) => {
   const { body, user, files } = req;
+  console.log(body.tag);
   try {
     const schema = Joi.object({
       authorId: Joi.number().required(),
       title: Joi.string().required(),
       image: Joi.string().required(),
       body: Joi.string().required(),
-      tag: Joi.array(),
+      tag: Joi.exist(),
     });
 
     const { error } = schema.validate(

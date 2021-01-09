@@ -1,10 +1,13 @@
 {
-  "name": "Kompas",
+  "name": "kompas",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "client": "npm start --prefix ../client",
+    "server": "nodemon index",
+    "dev": "concurrently \"npm run server\" \"npm run client\" "
   },
   "keywords": [],
   "author": "Seiga",

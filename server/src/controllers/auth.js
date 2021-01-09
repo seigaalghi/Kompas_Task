@@ -51,13 +51,21 @@ exports.register = async (req, res) => {
       id: author.id,
     };
 
+    const response = await Author.findOne({
+      where: { email: body.email },
+      attributes: {
+        exclude: ["updatedAt", "password"],
+      },
+    });
+
     jwt.sign(payload, process.env.SECRET_TOKEN, { expiresIn: 36000000000 }, (err, token) => {
       if (err) throw err;
       return res.status(200).json({
         status: "success",
-        message: "Registered in successfully",
+        message: "Registered successfully",
         data: {
           token,
+          author: response,
         },
       });
     });
@@ -99,6 +107,9 @@ exports.login = async (req, res) => {
       where: {
         email,
       },
+      attributes: {
+        exclude: ["updatedAt"],
+      },
     });
 
     if (!author) {
@@ -119,8 +130,16 @@ exports.login = async (req, res) => {
 
     const payload = {
       id: author.id,
-      role: author.role,
     };
+
+    const response = await Author.findOne({
+      where: {
+        email,
+      },
+      attributes: {
+        exclude: ["updatedAt", "password"],
+      },
+    });
 
     jwt.sign(payload, process.env.SECRET_TOKEN, { expiresIn: 36000000000 }, (err, token) => {
       if (err) throw err;
@@ -129,6 +148,7 @@ exports.login = async (req, res) => {
         message: "Logged in successfully",
         data: {
           token,
+          author: response,
         },
       });
     });
@@ -150,26 +170,14 @@ exports.login = async (req, res) => {
 exports.loadUser = async (req, res) => {
   const { id } = req.user;
   try {
-    const user = await Author.findOne({
+    const author = await Author.findOne({
       where: { id },
       attributes: {
-        exclude: ["createdAt", "updatedAt", "password", "masterId"],
+        exclude: ["updatedAt", "password"],
       },
-      include: [
-        {
-          model: User,
-          as: "agents",
-          attributes: { exclude: ["createdAt", "updatedAt", "password", "masterId"] },
-        },
-        {
-          model: User,
-          as: "master",
-          attributes: { exclude: ["createdAt", "updatedAt", "password", "masterId"] },
-        },
-      ],
     });
 
-    if (!user) {
+    if (!author) {
       res.status(400).json({
         status: "failed",
         message: `User not found`,
@@ -179,7 +187,7 @@ exports.loadUser = async (req, res) => {
       status: "success",
       message: "User loaded successfully",
       data: {
-        user,
+        author,
       },
     });
   } catch (error) {
