@@ -1,4 +1,4 @@
-const { Author, Post, Tag } = require("../../models");
+const { Author, Post, Tag, Comment, Like } = require("../../models");
 const Joi = require("joi");
 
 // =================================================================================
@@ -21,6 +21,30 @@ exports.getPosts = async (req, res) => {
           model: Tag,
           as: "tags",
           attributes: ["id", "tag"],
+        },
+        {
+          model: Like,
+          as: "likes",
+          attributes: {
+            exclude: ["updatedAt"],
+          },
+          include: {
+            model: Author,
+            as: "author",
+            attributes: ["name"],
+          },
+        },
+        {
+          model: Comment,
+          as: "comments",
+          attributes: {
+            exclude: ["updatedAt"],
+          },
+          include: {
+            model: Author,
+            as: "author",
+            attributes: ["name"],
+          },
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -56,7 +80,52 @@ exports.getPosts = async (req, res) => {
 exports.getPostById = async (req, res) => {
   const { id } = req.params;
   try {
-    const post = await Post.findOne({ where: { id } });
+    const post = await Post.findOne({
+      where: { id },
+      attributes: {
+        exclude: ["updatedAt", "authorId"],
+      },
+      include: [
+        {
+          model: Author,
+          as: "author",
+          attributes: ["id", "name"],
+        },
+        {
+          model: Tag,
+          as: "tags",
+          attributes: ["id", "tag"],
+        },
+        {
+          model: Like,
+          as: "likes",
+          attributes: {
+            exclude: ["updatedAt"],
+          },
+          include: {
+            model: Author,
+            as: "author",
+            attributes: ["name"],
+          },
+        },
+        {
+          model: Comment,
+          as: "comments",
+          attributes: {
+            exclude: ["updatedAt"],
+          },
+          include: {
+            model: Author,
+            as: "author",
+            attributes: ["name"],
+          },
+        },
+      ],
+      order: [
+        ["createdAt", "DESC"],
+        [{ model: Comment, as: "comments" }, "createdAt", "DESC"],
+      ],
+    });
 
     if (!post) {
       return res.status(400).json({
@@ -169,7 +238,7 @@ exports.addPost = async (req, res) => {
 
 exports.editPost = async (req, res) => {
   const { id } = req.params;
-  const { body, files } = req;
+  const { body, files, user } = req;
   try {
     const schema = Joi.object({
       title: Joi.string(),
@@ -193,6 +262,13 @@ exports.editPost = async (req, res) => {
     const old = await Post.findOne({
       where: { id },
     });
+
+    if (old.dataValues.authorId !== user.id) {
+      return res.status(400).json({
+        status: "failed",
+        message: `You can't edit a post that not yours`,
+      });
+    }
 
     const post = await Post.update(
       {
@@ -252,6 +328,15 @@ exports.editPost = async (req, res) => {
 exports.deletePost = async (req, res) => {
   const { id } = req.params;
   try {
+    const check = await Post.findOne({ where: { id } });
+
+    if (check.dataValues.authorId !== req.user.id) {
+      return res.status(400).json({
+        status: "failed",
+        message: `You can't delete a post that not yours`,
+      });
+    }
+
     const post = await Post.destroy({ where: { id } });
 
     if (!post) {
